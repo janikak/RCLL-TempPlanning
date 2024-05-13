@@ -1,0 +1,148 @@
+import argparse
+import math
+import random
+
+# colours
+baseColourOptions = ["black", "red"]
+capColourOptions = ["black", "grey"]
+
+# prepare parser
+parser = argparse.ArgumentParser(description= 'generate V1.5 problem')
+parser.add_argument('c0', metavar='C0Products', type=int, help='Number of C0 products', default=0)
+parser.add_argument('r', metavar='Robots', type=int, help='Number of robots', default=1)
+parser.add_argument('bS', metavar='BaseStations', type=int, help='Number of Base Stations', default=1)
+parser.add_argument('cS', metavar='CapStations', type=int, help='Number of Cap Stations', default=1)
+parser.add_argument('dS', metavar='DeliveryStations', type=int, help='Number of Delivery Stations', default=1)
+
+args = parser.parse_args()
+
+# randomize colours
+baseColour = ["black"]*args.c0
+capColour = ["black"]*args.c0
+
+for i in range(args.c0): 
+    baseColour[i] = baseColourOptions[random.randint(0,1)]
+    capColour[i] = capColourOptions[random.randint(0,1)]
+
+# start generating file
+name = "problemV15_" + str(args.c0) + "C0_" + str(args.r) + "R_" + str(args.bS ) + "BS_" + str(args.cS) + "CS_" + str(args.dS) + "DS_" + ".pddl"
+f= open(str(name),"w+")
+
+f.write("(define (problem test) (:domain RCLLV1_colors) \n(:objects \n")
+
+# set variables for later
+total = args.c0 
+
+# declare stations
+for i in range(args.bS): 
+    f.write("\tbaseStation" + str(i) + " - baseStation\n")
+for i in range(args.cS): 
+    f.write("\tcapStation" + str(i) + " - capStation\n")
+for i in range(args.dS): 
+    f.write("\tdeliveryStation" + str(i) + " - deliveryStation\n")
+f.write("\n")
+
+# declare robots
+for i in range(args.r): 
+    f.write("\trobot" + str(i) + " - robot\n")
+f.write("\n")
+
+# declare pieces
+for i in range(total):
+    f.write("\tbase" + str(i) + " - base\n")
+for i in range(total):
+    f.write("\tcap" + str(i) + " - cap\n")
+for i in range(total):
+    f.write("\tcapCarrier" + str(i) + " - base\n")
+f.write("\n")
+
+f.write(")\n(:init\n")
+
+# init
+# declare stations states
+f.write("\t;Standart initial conditions: all stations are idle\n")
+for i in range(args.bS): 
+    f.write("\t(stationState baseStation" + str(i) + " idle)\n")
+for i in range(args.cS): 
+    f.write("\t(stationState capStation" + str(i) + " idle)\n")
+    f.write("\t(stationState capStation" + str(i) + " noCapCarrierOutput)\n")
+for i in range(args.dS): 
+    f.write("\t(stationState deliveryStation" + str(i) + " idle)\n")
+f.write("\n")
+
+f.write("\t;Standart initial conditions: all robots are available\n")
+for i in range(args.r): 
+    f.write("\t(available robot" + str(i) + ")\n")
+    f.write("\t(gripFree robot" + str(i) + ")\n")
+f.write("\n")
+
+# assign colours
+for i in range(total):
+    f.write("\t(color " + "base" + str(i) + " " + str(baseColour[i]) + ")\n")
+for i in range(total):
+    f.write("\t(color " + "cap" + str(i) + " " + str(capColour[i]) + ")\n")
+for i in range(total):
+    f.write("\t(color " + "capCarrier" + str(i) + " silver)\n")
+f.write("\n")
+
+# split up workpieces over stations
+f.write("\t;declare locations of workpieces\n")
+
+# bases over base stations
+if(args.bS >= 2):
+    for i in range(total):
+        stationNumber = i%args.bS
+        if(baseColour[i] == "black"):               
+            if((stationNumber%2) != 0): 
+                stationNumber = stationNumber - 1
+        elif(baseColour[i] == "red"):
+            if((stationNumber%2) != 1): 
+                stationNumber = stationNumber + 1
+        f.write("\t(storedAt base" + str(i) + " baseStation" + str(stationNumber) + ")\n")
+else:
+    for i in range(total):
+        f.write("\t(storedAt base" + str(i) + " baseStation" + str(i%args.bS) + ")\n")
+f.write("\n")
+
+# caps over cap stations
+if(args.cS >= 2):
+    for i in range(total):
+        stationNumber = i%args.cS
+        if(capColour[i] == "black"):               
+            if((stationNumber%2) != 0): 
+                stationNumber = stationNumber - 1
+        elif(capColour[i] == "grey"):
+            if((stationNumber%2) != 1): 
+                stationNumber = stationNumber + 1
+        f.write("\t(storedAt cap" + str(i) + " capStation" + str(stationNumber) + ")\n")
+else:
+    for i in range(total):
+        f.write("\t(storedAt cap" + str(i) + " capStation" + str(i%args.cS) + ")\n")
+f.write("\n")
+
+# caps on CapCarriers
+for i in range(total):
+    f.write("\t(on cap" + str(i) + " capCarrier" + str(i) + ")\n")
+f.write("\n")
+
+f.write(")\n")
+
+# define goals
+
+f.write("(:goal (and\n")
+
+# delivery & disposal
+for i in range(total):
+    f.write("\t(delivered cap" + str(i) + ")\n")
+f.write("\n")
+    
+for i in range(total):
+    f.write("\t(disposed capCarrier" + str(i) + ")\n")
+f.write("\n")
+    
+# build products
+for i in range(args.c0):
+    f.write("\t(on cap" + str(i) + " base" + str(i) + ")\n")
+    f.write("\n")
+
+f.write(")) \n)")

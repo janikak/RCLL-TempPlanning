@@ -1,0 +1,81 @@
+import argparse
+import math
+
+# prepare parser
+parser = argparse.ArgumentParser(description= 'generate V0 problem')
+parser.add_argument('c0', metavar='C0Products', type=int, help='Number of C0 products', default=0)
+parser.add_argument('r', metavar='Robots', type=int, help='Number of robots', default=1)
+parser.add_argument('bS', metavar='BaseStations', type=int, help='Number of Base Stations', default=1)
+parser.add_argument('cS', metavar='CapStations', type=int, help='Number of Cap Stations', default=1)
+
+args = parser.parse_args()
+
+# start generating file
+name = "problemV0_" + str(args.c0) + "C0_" + str(args.r) + "R_" + str(args.bS ) + "BS_" + str(args.cS) + "CS_" + ".pddl"
+f= open(str(name),"w+")
+
+f.write("(define (problem test) (:domain RCLLsimplified) \n(:objects \n" )
+
+# set variables for later
+total = args.c0
+
+# declare stations
+for i in range(args.bS): 
+    f.write("\tbaseStation" + str(i) + " - baseStation\n")
+for i in range(args.cS): 
+    f.write("\tcapStation" + str(i) + " - capStation\n")
+f.write("\n")
+
+# declare robots
+for i in range(args.r): 
+    f.write("\trobot" + str(i) + " - robot\n")
+f.write("\n")
+
+# declare pieces
+for i in range(total):
+    f.write("\tbase" + str(i) + " - base\n")
+for i in range(total):
+    f.write("\tcap" + str(i) + " - cap\n")
+    
+f.write(")\n(:init\n")
+
+# init
+# declare stations states
+f.write("\t;Standart initial conditions: all stations are idle\n")
+for i in range(args.bS): 
+    f.write("\t(stationState baseStation" + str(i) + " idle)\n")
+for i in range(args.cS): 
+    f.write("\t(stationState capStation" + str(i) + " idle)\n")
+f.write("\n")
+
+f.write("\t;Standart initial conditions: all robots are available\n")
+for i in range(args.r): 
+    f.write("\t(available robot" + str(i) + ")\n")
+    f.write("\t(gripFree robot" + str(i) + ")\n")
+f.write("\n")
+
+# split up workpieces over stations
+f.write("\t;declare locations of workpieces\n")
+
+# bases over base stations
+for i in range(total):
+    f.write("\t(storedAt base" + str(i) + " baseStation" + str(i%args.bS) + ")\n")
+f.write("\n")
+
+# caps over cap stations
+for i in range(total):
+    f.write("\t(storedAt cap" + str(i) + " capStation" + str(i%args.cS) + ")\n")
+f.write("\n")
+
+f.write(")\n")
+
+# define goals
+
+f.write("(:goal (and\n")
+    
+# build products
+for i in range(args.c0):
+    f.write("\t(on cap" + str(i) + " base" + str(i) + ")\n")
+    f.write("\n")
+
+f.write(")) \n)")
